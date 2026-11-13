@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta name="author" content="Riba">
+<!-- Escolha Sabiamente — feito por Riba -->
+
 <title>Escolha Sabiamente</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
@@ -17,6 +20,7 @@ html,body{width:100%;height:100%;background:#0a0618;overflow:hidden;font-family:
 #qtxt{font-family:'Lilita One',Impact,sans-serif;font-size:56px;line-height:1.1;text-shadow:0 4px 0 #1b0a52,0 0 20px #fff4;margin-top:4px}
 #timer{position:absolute;right:30px;top:30px;width:110px;height:110px;border-radius:50%;background:#ffd23f;color:#2a0f7a;
  font-family:'Lilita One';font-size:60px;display:none;align-items:center;justify-content:center;border:6px solid #fff;box-shadow:0 6px 20px #000a}
+#credit{position:absolute;right:22px;bottom:10px;font-family:'Lilita One',Impact,sans-serif;font-size:24px;opacity:.5;text-shadow:0 2px 0 #000a;pointer-events:auto;letter-spacing:1px}
 #hud{position:absolute;left:20px;top:200px;font-family:'Lilita One';font-size:30px;text-shadow:0 3px 0 #000a;line-height:1.2}
 #hud b{color:#ffd23f}
 #help{position:absolute;left:20px;bottom:150px;font-size:24px;background:#000a;padding:10px 16px;border-radius:14px;max-width:560px;line-height:1.25}
@@ -65,6 +69,7 @@ html,body{width:100%;height:100%;background:#0a0618;overflow:hidden;font-family:
   <div id="hud"></div>
   <div id="help"></div>
   <div id="toast"></div>
+  <div id="credit">Feito por <a href="https://riba.com.br" target="_blank" rel="noopener" style="color:inherit">Riba</a></div>
   <div id="winner"><div class="a">🏆 VENCEDOR 🏆</div><div class="n" id="wname"></div></div>
 </div>
 
@@ -81,6 +86,7 @@ html,body{width:100%;height:100%;background:#0a0618;overflow:hidden;font-family:
       <input type="file" id="qfile" accept=".txt,text/plain,.TXT" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0">
       <div id="qmsg" style="font-size:15px;opacity:.85;margin-top:4px;min-height:20px"></div>
     </div>
+    <div style="margin-top:16px;font-size:18px;opacity:.75">🎮 Feito por <a href="https://riba.com.br" target="_blank" rel="noopener" style="color:#ffd23f;text-decoration:underline">Riba</a></div>
     <div id="introst" style="margin-top:12px;font-size:18px;color:#ffd23f;min-height:24px"></div>
   </div>
 </div>
@@ -403,7 +409,7 @@ function startRound(){
   if(aliveList().length<2){toast('Precisa de pelo menos 2 jogadores!');return;}
   G.cur=nextQ();G.round++;G.correct=G.cur.correct;
   aliveList().forEach(p=>p.choice=0);
-  G.noRight=false;G.shut=[0,0,0];SND.play('open',0);SND.mode('tense');G.phase='opening';G.openT=0;G.launched=false;G.returned=false;
+  G.noRight=false;G.shut=[0,0,0];SND.play('open',0);SND.mode('pick');G.phase='opening';G.openT=0;G.launched=false;G.returned=false;
 }
 function finishRound(){
   if(G.phase!=='question')return;
@@ -564,6 +570,7 @@ const SND=(()=>{
   /* música gerativa: acordes, tonalidade e melodia mudam sozinhos, então não vira loop repetitivo */
   const PAT={calm:{bpm:104,wave:'triangle',sc:[0,2,4,7,9],prog:[[0,9,5,7],[0,5,7,0],[0,7,9,5],[9,5,0,7],[0,4,5,7]]},
              tense:{bpm:132,wave:'square',sc:[0,2,3,5,7,8,10],prog:[[0,8,5,7],[0,5,8,7],[0,10,8,7],[0,3,8,7]]},
+             pick:{bpm:118,wave:'square',pluck:true,walk:true,tick:true,sc:[0,2,4,7,9],prog:[[0,5,7,0],[0,7,5,7],[0,9,5,7],[0,5,0,7]]},
              drama:{bpm:150,wave:'sawtooth',sc:[0,1,3,5,7,8,10],prog:[[0,1,0,10],[0,8,1,0],[0,5,1,0],[0,3,1,7]]}};
   const KEYS=[-5,-3,-2,0,2,3,5];
   let key=0,bar=0,prog=null,motif=[],lastMode='';
@@ -574,7 +581,7 @@ const SND=(()=>{
     if(!ctx)return;
     if(!musicOn||muted||mode==='silent'){nextT=Math.max(nextT,ctx.currentTime+.05);return;}
     const p=PAT[mode]||PAT.calm;
-    if(mode!==lastMode){lastMode=mode;prog=null;bar=0;motif=[];}
+    if(mode!==lastMode){lastMode=mode;prog=null;bar=0;motif=[];step=Math.ceil(step/8)*8;}
     const dur=60/p.bpm/2;
     while(nextT<ctx.currentTime+.25){
       const i=step%8;
@@ -584,19 +591,20 @@ const SND=(()=>{
         const b4=bar%4;
         if(b4===1||!motif.length)motif=newMotif(p);else if(b4===3||b4===2)motif=mutate(motif,p);
       }
-      const root=prog[(bar-1)%4]+key,third=(mode==='calm'?4:3);
+      const root=prog[(bar-1)%4]+key,third=((mode==='calm'||mode==='pick')?4:3);
       // baixo
-      if(i===0||i===4||(i===6&&Math.random()<.3))tone(N(root-24+(i===6?12:0)),nextT,dur*(i===0?3.5:2.2),'triangle',.55,0,mus);
+      if(p.walk?(i%2===0):(i===0||i===4||(i===6&&Math.random()<.3)))tone(N(root-24+(i===6?12:0)),nextT,dur*(i===0?3.5:2.2),'triangle',.55,0,mus);
       // pad suave no início do compasso
       if(i===0){[0,third,7].forEach(s=>tone(N(root-12+s),nextT,dur*7.5,'sine',.07,0,mus));}
       // melodia (notas fortes puxam para o acorde)
       let n=motif[i];
       if(n!==null&&n!==undefined){
         if(i===0||i===4){n=[0,third,7,12][Math.floor(Math.random()*4)];}
-        tone(N(key+n),nextT,dur*(Math.random()<.3?1.8:.9),p.wave,mode==='calm'?.13:.11,0,mus);
+        tone(N(key+n),nextT,dur*(p.pluck?.45:(Math.random()<.3?1.8:.9)),p.wave,mode==='calm'?.13:.11,0,mus);
       }
       // percussão leve
-      if(mode!=='calm'&&(i===0||i===4))tone(110,nextT,.12,'sine',.5,50,mus);
+      if(p.tick&&i%2===0)tone(i%4===0?1900:1500,nextT,.03,'square',.07,0,mus);
+      if(mode!=='calm'&&mode!=='pick'&&(i===0||i===4))tone(110,nextT,.12,'sine',.5,50,mus);
       if(mode==='drama'&&i%2===1)noise(nextT,.05,.08,300,null,'lowpass',mus);
       if(i%2===0)noise(nextT,.035,mode==='calm'?.035:.06,7000,null,'highpass',mus);
       nextT+=dur;step++;
